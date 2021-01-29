@@ -1,5 +1,5 @@
-logdir=./logs/greece
-image=greece.jpg
+logdir=./logs/fox
+image=fox.jpg
 
 model=gffm
 
@@ -7,7 +7,7 @@ ffm_map_size=2048
 ffm_map_scale=62.8
 
 gffm_map_size=4096
-gffm_map_h=100
-gffm_map_w=100
+gffm_map_h=64
+gffm_map_w=64
 
 num_epochs=200

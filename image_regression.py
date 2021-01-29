@@ -127,7 +127,7 @@ p.add_argument('--batch_size', type=int, default=100000)
 p.add_argument('--lr', type=float, default=1e-4, help='learning rate. default=1e-4')
 p.add_argument('--num_epochs', type=int, default=20, help='Number of epochs to train for.')
 
-p.add_argument('--epochs_til_ckpt', type=int, default=20,
+p.add_argument('--epochs_til_ckpt', type=int, default=50,
                help='Epoch interval until checkpoint is saved.')
 p.add_argument('--steps_til_summary', type=int, default=100,
                help='Step interval until loss is printed.')
@@ -170,7 +170,7 @@ if os.path.exists(os.path.join(logdir, 'checkpoints')):
         state_dict = ckpt['model']
 
 # network architecture
-network_size = (3,1024)
+network_size = (4,256)
 
 if args.model_type == 'relu':
     model = make_relu_network(*network_size)

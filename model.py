@@ -68,7 +68,7 @@ class MLP(nn.Module):
         for i, l in enumerate(self.linears):
             h = self.linears[i](h)
             h = F.relu(h)
-        outputs = self.output_linear(h)
+        outputs = torch.sigmoid(self.output_linear(h))
         return outputs
     
 def make_ffm_network(D, W, B=None):
