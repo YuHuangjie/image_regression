@@ -126,6 +126,7 @@ p.add_argument('--image', type=str, default='greece.jpg', help='path to image')
 p.add_argument('--batch_size', type=int, default=100000)
 p.add_argument('--lr', type=float, default=1e-4, help='learning rate. default=1e-4')
 p.add_argument('--num_epochs', type=int, default=20, help='Number of epochs to train for.')
+p.add_argument('--kernel', type=str, default="exp")
 
 p.add_argument('--epochs_til_ckpt', type=int, default=50,
                help='Epoch interval until checkpoint is saved.')
@@ -140,8 +141,8 @@ p.add_argument('--ffm_map_scale', type=float, default=16,
                help='Gaussian mapping scale of positional input')
 p.add_argument('--gffm_map_size', type=int, default=4096,
                help='mapping dimension of gffm')
-p.add_argument('--gffm_map_h', type=float, default=16)
-p.add_argument('--gffm_map_w', type=float, default=16)
+p.add_argument('--ls_exp', type=float, default=16, help='(inverse) length scale of exp kernel')
+p.add_argument('--ls_exp2', type=float, default=16, help='(inverse) length scale of exp2 kernel')
 args = p.parse_args()
 
 # prepare data loader
@@ -151,7 +152,7 @@ val_dataset = ImageDataset(image)
 train_dataloader = DataLoader(train_dataset, pin_memory=True, num_workers=4, batch_size=args.batch_size, shuffle=True)
 val_dataloader = DataLoader(val_dataset, pin_memory=False, num_workers=4, batch_size=args.batch_size, shuffle=True)
 
-logdir = os.path.join(args.logdir, args.model_type)
+logdir = os.path.join(args.logdir, f'{args.model_type}-{args.kernel}')
 if args.restart:
     shutil.rmtree(logdir, ignore_errors=True)
 
@@ -183,8 +184,12 @@ elif args.model_type == 'ffm':
     model_params = (B)
 elif args.model_type == 'gffm':
     if model_params is None:
-        # W = rbf_sample(args.gffm_map_t, args.gffm_map_h, args.gffm_map_w, args.gffm_map_size)
-        W = exp_sample(args.gffm_map_h, args.gffm_map_w, args.gffm_map_size)
+        if args.kernel == 'exp':
+            W = exp_sample(args.ls_exp, args.gffm_map_size)
+        elif args.kernel == 'exp2':
+            W = exp2_sample(args.ls_exp2, args.gffm_map_size)
+        else:
+            raise NotImplementedError
         b = np.random.uniform(0, np.pi * 2, args.gffm_map_size)
     else:
         W, b = model_params
