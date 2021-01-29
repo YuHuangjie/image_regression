@@ -1,0 +1,13 @@
+logdir=./logs/greece
+image=greece.jpg
+
+model=gffm
+
+ffm_map_size=2048
+ffm_map_scale=32
+
+gffm_map_size=4096
+gffm_map_h=16
+gffm_map_w=16
+
+num_epochs=20
