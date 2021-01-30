@@ -49,8 +49,16 @@ def exp2_sample(a, N):
         
         The kernel is defined as 
                 K = exp(-a*sqrt(x^2+y^2)).
-        The Inverse Fourier transform of k: 
-                P(w) = a/(a^2+||w||^2)^1.5.
+        This is a special case of Matern class kernel function when nu=1/2.
+        '''
+        return matern_sample(a, 0.5, N)
+
+def matern_sample(a, nu, N):
+        '''
+        Return random frequcies as in Random Fourier Features. 
+        
+        The kernel is Matern class kernel. The Inverse Fourier transform is:
+                P(w) = a^{2*nu}/(2*nu*a^2 + ||w||^2)**(n/2+nu).
 
         We sample from P(w) using rejection sampling method.
         '''
@@ -59,8 +67,8 @@ def exp2_sample(a, N):
 
         while i < N:
                 x,y = np.random.uniform(-1000, 1000, (2, N))
-                p = np.random.uniform(0, 1./(a**2), N)
-                u = a/(a**2 + x**2+y**2)**(1.5)
+                p = np.random.uniform(0, 1./((2*nu)**(nu+1) * a**2), N)
+                u = a**(2*nu)/(2*nu*a**2 + x**2+y**2)**(nu+1)
 
                 mask = p < u
                 if mask.sum() > 0:

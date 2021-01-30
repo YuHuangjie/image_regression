@@ -126,7 +126,7 @@ p.add_argument('--image', type=str, default='greece.jpg', help='path to image')
 p.add_argument('--batch_size', type=int, default=100000)
 p.add_argument('--lr', type=float, default=1e-4, help='learning rate. default=1e-4')
 p.add_argument('--num_epochs', type=int, default=20, help='Number of epochs to train for.')
-p.add_argument('--kernel', type=str, default="exp")
+p.add_argument('--kernel', type=str, default="exp", help='choose from [exp], [exp2], [matern]')
 
 p.add_argument('--epochs_til_ckpt', type=int, default=50,
                help='Epoch interval until checkpoint is saved.')
@@ -143,6 +143,8 @@ p.add_argument('--gffm_map_size', type=int, default=4096,
                help='mapping dimension of gffm')
 p.add_argument('--ls_exp', type=float, default=16, help='(inverse) length scale of exp kernel')
 p.add_argument('--ls_exp2', type=float, default=16, help='(inverse) length scale of exp2 kernel')
+
+p.add_argument('--matern_order', type=float, default=0.5, help='\nu in Matern class kernel function')
 args = p.parse_args()
 
 # prepare data loader
@@ -188,6 +190,8 @@ elif args.model_type == 'gffm':
             W = exp_sample(args.ls_exp, args.gffm_map_size)
         elif args.kernel == 'exp2':
             W = exp2_sample(args.ls_exp2, args.gffm_map_size)
+        elif args.kernel == 'matern':
+            W = matern_sample(args.ls_matern, args.matern_order, args.gffm_map_size)
         else:
             raise NotImplementedError
         b = np.random.uniform(0, np.pi * 2, args.gffm_map_size)

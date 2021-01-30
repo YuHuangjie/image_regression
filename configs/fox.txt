@@ -11,4 +11,7 @@ gffm_map_size=4096
 ls_exp=64
 ls_exp2=64
 
+ls_matern = 64
+matern_order=0.5
+
 num_epochs=200
