@@ -26,7 +26,7 @@ def get_2d_mgrid(shape):
     return pixel_coords
 
 class ImageDataset(torch.utils.data.Dataset):
-    def __init__(self, image):
+    def __init__(self, image, randomize=False, batch_size=0):
 
         self.image = image
 
@@ -34,12 +34,34 @@ class ImageDataset(torch.utils.data.Dataset):
         data = torch.from_numpy(self.image)
         self.data = data.view(-1, 3)
         self.N_samples = self.mgrid.shape[0]
+        self.batch_size = batch_size
+        self.randomize = randomize
+
+        # shuffle data
+        if self.randomize:
+            perm = np.random.permutation(self.N_samples)
+            self.mgrid = self.mgrid[perm]
+            self.data = self.data[perm]
 
     def __len__(self):
-        return self.N_samples
+        if self.randomize:
+            return self.N_samples // self.batch_size
+        else:
+            return self.N_samples
 
     def __getitem__(self, idx):
-        return self.mgrid[idx, :], self.data[idx, :]
+        if self.randomize:
+            start = np.random.randint(0, self.N_samples)
+            end = start + self.batch_size
+            if end < self.N_samples:
+                return (self.mgrid[start:end], self.data[start:end])
+            else:
+                # rotate
+                end -= self.N_samples
+                return ( np.vstack([self.mgrid[:end], self.mgrid[start:]]), 
+                        np.vstack([ self.data[:end],  self.data[start:]]))
+        else:
+            return (self.mgrid[idx, :], self.data[idx, :])
 
 def train(model, train_dataloader, lr, epochs, logdir, epochs_til_checkpoint=10, 
     steps_til_summary=100, val_dataloader=None, global_step=0, model_params=None):
@@ -123,7 +145,7 @@ p.add_argument('--restart', action='store_true', help='do not reload from checkp
 p.add_argument('--image', type=str, default='greece.jpg', help='path to image')
 
 # General training options
-p.add_argument('--batch_size', type=int, default=100000)
+p.add_argument('--batch_size', type=int, default=50000)
 p.add_argument('--lr', type=float, default=1e-4, help='learning rate. default=1e-4')
 p.add_argument('--num_epochs', type=int, default=20, help='Number of epochs to train for.')
 p.add_argument('--kernel', type=str, default="exp", help='choose from [exp], [exp2], [matern]')
@@ -141,18 +163,18 @@ p.add_argument('--ffm_map_scale', type=float, default=16,
                help='Gaussian mapping scale of positional input')
 p.add_argument('--gffm_map_size', type=int, default=4096,
                help='mapping dimension of gffm')
-p.add_argument('--ls_exp', type=float, default=16, help='(inverse) length scale of exp kernel')
-p.add_argument('--ls_exp2', type=float, default=16, help='(inverse) length scale of exp2 kernel')
+p.add_argument('--ls_exp1', type=float, default=16, help='(inverse) length scale of exp L1 kernel')
+p.add_argument('--ls_exp2', type=float, default=16, help='(inverse) length scale of exp L2 kernel')
 
+p.add_argument('--ls_matern', type=float, default=16, help='(inverse) length scale of Matern kernel')
 p.add_argument('--matern_order', type=float, default=0.5, help='\nu in Matern class kernel function')
 args = p.parse_args()
 
 # prepare data loader
 image = imageio.imread(args.image).astype(np.float32) / 255.
-train_dataset = ImageDataset(image)
-val_dataset = ImageDataset(image)
-train_dataloader = DataLoader(train_dataset, pin_memory=True, num_workers=4, batch_size=args.batch_size, shuffle=True)
-val_dataloader = DataLoader(val_dataset, pin_memory=False, num_workers=4, batch_size=args.batch_size, shuffle=True)
+train_dataset = ImageDataset(image, randomize=True, batch_size=args.batch_size)
+val_dataset = ImageDataset(image, randomize=False)
+train_dataloader = DataLoader(train_dataset, pin_memory=True, batch_size=1, shuffle=True)
 
 logdir = os.path.join(args.logdir, f'{args.model_type}-{args.kernel}')
 if args.restart:
@@ -186,8 +208,8 @@ elif args.model_type == 'ffm':
     model_params = (B)
 elif args.model_type == 'gffm':
     if model_params is None:
-        if args.kernel == 'exp':
-            W = exp_sample(args.ls_exp, args.gffm_map_size)
+        if args.kernel == 'exp1':
+            W = exp_sample(args.ls_exp1, args.gffm_map_size)
         elif args.kernel == 'exp2':
             W = exp2_sample(args.ls_exp2, args.gffm_map_size)
         elif args.kernel == 'matern':
@@ -210,13 +232,12 @@ model.cuda()
 if not args.test_only:
     train(model, train_dataloader, args.lr, epochs=args.num_epochs, 
         logdir=logdir, epochs_til_checkpoint=args.epochs_til_ckpt, 
-        steps_til_summary=args.steps_til_summary, val_dataloader=val_dataloader,
+        steps_til_summary=args.steps_til_summary, val_dataloader=None,
         global_step=global_step, model_params=model_params)
 
 # make full testing
 print("Running full validation set...")
-val_dataloader = DataLoader(val_dataset, pin_memory=False, num_workers=val_dataloader.num_workers, 
-    batch_size=args.batch_size, shuffle=False)
+val_dataloader = DataLoader(val_dataset, pin_memory=False, batch_size=args.batch_size, shuffle=False)
 
 model.eval()
 with torch.no_grad():
@@ -232,3 +253,4 @@ imageio.imwrite(os.path.join(logdir, "test.png"), np.clip(pred_image * 255, 0, 2
 mse = np.mean((image - pred_image)**2)
 psnr = -10 * np.log10(mse)
 print(f"PSNR: {psnr}")
+np.save(os.path.join(logdir, 'test_psnr.npy'), np.array([psnr]))
