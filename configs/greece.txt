@@ -2,13 +2,11 @@ logdir=./logs/greece
 image=greece.jpg
 
 model=gffm
-kernel=exp2
-
 ffm_map_size=2048
 ffm_map_scale=62.8
-
 gffm_map_size=4096
-ls_exp1=100
-ls_exp2=100
+
+kernel=exp2
+length_scale=100
 
 num_epochs=800

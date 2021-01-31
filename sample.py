@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import integrate
 
 # def rbf_sample(gamma_x, gamma_y, N):
 #         '''
@@ -69,6 +70,41 @@ def matern_sample(a, nu, N):
                 x,y = np.random.uniform(-1000, 1000, (2, N))
                 p = np.random.uniform(0, 1./((2*nu)**(nu+1) * a**2), N)
                 u = a**(2*nu)/(2*nu*a**2 + x**2+y**2)**(nu+1)
+
+                mask = p < u
+                if mask.sum() > 0:
+                        samples[i:i+mask.sum()] = np.hstack([
+                                x[mask].reshape((-1,1)), 
+                                y[mask].reshape((-1,1))])
+                        i += mask.sum()
+        return samples[:N]
+
+def gamma_exp2_sample(a, gamma, N):
+        '''
+        The kernel is defined as 
+                K = exp(-(a*sqrt(x^2+y^2))^gamma).
+
+        Becomes EXP2 kernel when gamma = 1.
+        '''
+        ## numerical Fourier transform of the kernel
+        integrand_gamma_exp = lambda x, frq_v, gamma, a: np.exp(-(x*a)**gamma)*np.cos(frq_v*x)
+
+        frq_v = np.linspace(0, 100, 101) * 10
+        for i, fv in enumerate(frq_v):
+                if integrate.quad(integrand_gamma_exp, 0, np.inf, args=(fv, gamma, a))[0] < 1e-3:
+                        break
+        frq_v = np.linspace(0, frq_v[i], num=int(frq_v[i])*10 if int(frq_v[i])>40 else 40)
+        freq = np.zeros_like(frq_v)
+        for i, fv in enumerate(frq_v):
+                freq[i] = integrate.quad(integrand_gamma_exp, 0, np.inf, args=(fv, gamma, a))[0]
+
+        ## perform rejection sampling
+        samples = np.zeros((N*2, 2))
+        i = 0
+        while i < N:
+                x, y = np.random.uniform(-1000, 1000, (2, N))
+                p = np.random.uniform(0, freq[0], N)
+                u = np.interp((x*x+y*y)**0.5, frq_v, freq, right=0)
 
                 mask = p < u
                 if mask.sum() > 0:
