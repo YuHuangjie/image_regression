@@ -1,5 +1,7 @@
 import numpy as np
-from scipy import integrate
+import os
+from ctypes import *
+from scipy import integrate, LowLevelCallable
 
 # def rbf_sample(gamma_x, gamma_y, N):
 #         '''
@@ -87,16 +89,17 @@ def gamma_exp2_sample(a, gamma, N):
         Becomes EXP2 kernel when gamma = 1.
         '''
         ## numerical Fourier transform of the kernel
-        integrand_gamma_exp = lambda x, frq_v, gamma, a: np.exp(-(x*a)**gamma)*np.cos(frq_v*x)
+        lib = CDLL(os.path.abspath('./integrand_gamma_exp/integrand_gamma_exp.so'))
+        lib.integrand_gamma_exp.restype = c_double
+        lib.integrand_gamma_exp.argtypes = (c_int, POINTER(c_double), c_void_p)
 
-        frq_v = np.linspace(0, 100, 101) * 10
-        for i, fv in enumerate(frq_v):
-                if integrate.quad(integrand_gamma_exp, 0, np.inf, args=(fv, gamma, a))[0] < 1e-3:
-                        break
-        frq_v = np.linspace(0, frq_v[i], num=int(frq_v[i])*10 if int(frq_v[i])>40 else 40)
-        freq = np.zeros_like(frq_v)
-        for i, fv in enumerate(frq_v):
-                freq[i] = integrate.quad(integrand_gamma_exp, 0, np.inf, args=(fv, gamma, a))[0]
+        frq_r = np.linspace(0, 1000)
+        freq = np.zeros_like(frq_r)
+        for i, fr in enumerate(frq_r):
+                c = np.array([fr, gamma, a])
+                user_data = cast(c.ctypes.data_as(POINTER(c_double)), c_void_p)
+                func = LowLevelCallable(lib.integrand_gamma_exp, user_data)
+                freq[i] = integrate.dblquad(func, -np.inf, np.inf, lambda x: -np.inf, lambda x: np.inf)[0]
 
         ## perform rejection sampling
         samples = np.zeros((N*2, 2))
@@ -104,7 +107,7 @@ def gamma_exp2_sample(a, gamma, N):
         while i < N:
                 x, y = np.random.uniform(-1000, 1000, (2, N))
                 p = np.random.uniform(0, freq[0], N)
-                u = np.interp((x*x+y*y)**0.5, frq_v, freq, right=0)
+                u = np.interp((x**2+y**2)**0.5, frq_r, freq, right=0)
 
                 mask = p < u
                 if mask.sum() > 0:

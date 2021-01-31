@@ -2,3 +2,5 @@ ConfigArgParse
 tqdm
 torch
 imageio
+numpy
+scipy
