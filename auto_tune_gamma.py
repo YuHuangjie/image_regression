@@ -6,7 +6,7 @@ import numpy as np
 data_id = 'fox'
 
 gammas = [1/4, 1/2, 3/4, 1, 5/4, 6/4, 7/4, 8/4]
-alphas = 2**np.array([3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7])
+alphas = 2**np.array([4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9])
 trials = 5
 
 for gamma in gammas:

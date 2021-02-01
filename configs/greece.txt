@@ -3,7 +3,7 @@ image=greece.jpg
 
 model=gffm
 ffm_map_size=2048
-ffm_map_scale=62.8
+ffm_map_scale=128
 gffm_map_size=4096
 
 kernel=exp2

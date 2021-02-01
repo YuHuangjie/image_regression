@@ -6,7 +6,7 @@ import numpy as np
 data_id = 'fox'
 
 matern_orders = [1/4, 1/2, 1, 3/2, 2, 5/2]
-alphas = 2**np.array([3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7])
+alphas = 2**np.array([4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8])
 trials = 5
 
 for order in matern_orders:
