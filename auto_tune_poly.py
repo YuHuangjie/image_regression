@@ -5,7 +5,7 @@ import numpy as np
 
 data_id = 'fox'
 
-orders = 2**np.array([4,5,6,6.5,7,7.5,8])
+orders = 2**np.array([4,5,5.5,6,6.5,7,7.5,8])
 trials = 5
 
 for order in orders:
@@ -34,7 +34,7 @@ for order in orders:
                 result_path = f'logs/{data_id}-tune-poly/{order}-try{trial}/gffm-poly/test_psnr.npy'
                 psnr += np.load(result_path)
         psnrs.append(psnr / trials)
-ax.plot(orders, psnrs)
+ax.plot(orders, psnrs, marker='*')
         
 ax.set_xlabel(r'$\alpha$')
 ax.set_xlim((orders[0], orders[-1]))
