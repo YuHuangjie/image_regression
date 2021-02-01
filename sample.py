@@ -83,16 +83,7 @@ def matern_sample(a, nu, N):
 
 def numerical_fourier(integrand, N, *args):
         ## numerical Fourier transform of the kernel
-        frq_r = np.linspace(0, 1000)
-        freq = np.zeros_like(frq_r)
-        for i, fr in enumerate(frq_r):
-                c = np.array([fr]+list(args))
-                user_data = cast(c.ctypes.data_as(POINTER(c_double)), c_void_p)
-                func = LowLevelCallable(integrand, user_data)
-                freq[i] = integrate.dblquad(func, -np.inf, np.inf, lambda x: -np.inf, lambda x: np.inf)[0]
-                if i > 0 and freq[i]/freq[0] < 0.01:
-                        break
-        frq_r = np.linspace(0, frq_r[i])
+        frq_r = np.linspace(0, 1000, 100)
         freq = np.zeros_like(frq_r)
         for i, fr in enumerate(frq_r):
                 c = np.array([fr]+list(args))
@@ -123,68 +114,21 @@ def gamma_exp2_sample(a, gamma, N):
 
         Becomes EXP2 kernel when gamma = 1.
         '''
-        ## numerical Fourier transform of the kernel
         lib = CDLL(os.path.abspath('./integrand_gamma_exp/integrand_gamma_exp.so'))
         lib.integrand_gamma_exp.restype = c_double
         lib.integrand_gamma_exp.argtypes = (c_int, POINTER(c_double), c_void_p)
-
-        frq_r = np.linspace(0, 1000)
-        freq = np.zeros_like(frq_r)
-        for i, fr in enumerate(frq_r):
-                c = np.array([fr, gamma, a])
-                user_data = cast(c.ctypes.data_as(POINTER(c_double)), c_void_p)
-                func = LowLevelCallable(lib.integrand_gamma_exp, user_data)
-                freq[i] = integrate.dblquad(func, -np.inf, np.inf, lambda x: -np.inf, lambda x: np.inf)[0]
-
-        ## perform rejection sampling
-        samples = np.zeros((N*2, 2))
-        i = 0
-        while i < N:
-                x, y = np.random.uniform(-1000, 1000, (2, N))
-                p = np.random.uniform(0, freq[0], N)
-                u = np.interp((x**2+y**2)**0.5, frq_r, freq, right=0)
-
-                mask = p < u
-                if mask.sum() > 0:
-                        samples[i:i+mask.sum()] = np.hstack([
-                                x[mask].reshape((-1,1)), 
-                                y[mask].reshape((-1,1))])
-                        i += mask.sum()
-        return samples[:N]
+        return numerical_fourier(lib.integrand_gamma_exp, N, gamma, a)
 
 def rq_sample(a, order, N):
         '''
         The kernel is defined as 
                 K = (1+a^2*(x^2+y^2)/(2*order))^(-order).
         '''
-        ## numerical Fourier transform of the kernel
         lib = CDLL(os.path.abspath('./integrand_rq/integrand_rq.so'))
         lib.integrand_rq.restype = c_double
         lib.integrand_rq.argtypes = (c_int, POINTER(c_double), c_void_p)
 
-        frq_r = np.linspace(0, 1000)
-        freq = np.zeros_like(frq_r)
-        for i, fr in enumerate(frq_r):
-                c = np.array([fr, order, a])
-                user_data = cast(c.ctypes.data_as(POINTER(c_double)), c_void_p)
-                func = LowLevelCallable(lib.integrand_rq, user_data)
-                freq[i] = integrate.dblquad(func, -np.inf, np.inf, lambda x: -np.inf, lambda x: np.inf)[0]
-
-        ## perform rejection sampling
-        samples = np.zeros((N*2, 2))
-        i = 0
-        while i < N:
-                x, y = np.random.uniform(-1000, 1000, (2, N))
-                p = np.random.uniform(0, freq[0], N)
-                u = np.interp((x**2+y**2)**0.5, frq_r, freq, right=0)
-
-                mask = p < u
-                if mask.sum() > 0:
-                        samples[i:i+mask.sum()] = np.hstack([
-                                x[mask].reshape((-1,1)), 
-                                y[mask].reshape((-1,1))])
-                        i += mask.sum()
-        return samples[:N]
+        return numerical_fourier(lib.integrand_rq, N, order, a)
 
 def poly_sample(order, N):
         '''
@@ -196,3 +140,14 @@ def poly_sample(order, N):
         lib.integrand_poly.argtypes = (c_int, POINTER(c_double), c_void_p)
 
         return numerical_fourier(lib.integrand_poly, N, order)
+
+def periodic_sample(a, p, N):
+        '''
+        The kernel is defined as 
+                K = exp(-2*a^2*sin(pi*sqrt(x^2+y^2)/p)).
+        '''
+        lib = CDLL(os.path.abspath('./integrand_periodic/integrand_periodic.so'))
+        lib.integrand_periodic.restype = c_double
+        lib.integrand_periodic.argtypes = (c_int, POINTER(c_double), c_void_p)
+
+        return numerical_fourier(lib.integrand_periodic, N, a, p)
