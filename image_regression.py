@@ -148,7 +148,7 @@ p.add_argument('--image', type=str, default='greece.jpg', help='path to image')
 p.add_argument('--batch_size', type=int, default=50000)
 p.add_argument('--lr', type=float, default=1e-4, help='learning rate. default=1e-4')
 p.add_argument('--num_epochs', type=int, default=20, help='Number of epochs to train for.')
-p.add_argument('--kernel', type=str, default="exp", help='choose from [exp], [exp2], [matern], [gamma_exp], [rq]')
+p.add_argument('--kernel', type=str, default="exp", help='choose from [exp], [exp2], [matern], [gamma_exp], [rq], [poly]')
 
 p.add_argument('--epochs_til_ckpt', type=int, default=50,
                help='Epoch interval until checkpoint is saved.')
@@ -168,6 +168,7 @@ p.add_argument('--length_scale', type=float, default=64, help='(inverse) length 
 p.add_argument('--matern_order', type=float, default=0.5, help='\nu in Matern class kernel function')
 p.add_argument('--gamma_order', type=float, default=1, help='gamma in gamma-exp kernel')
 p.add_argument('--rq_order', type=float, default=4, help='order in rational-quadratic kernel')
+p.add_argument('--poly_order', type=float, default=4, help='order in polynomial kernel')
 args = p.parse_args()
 
 # prepare data loader
@@ -218,6 +219,8 @@ elif args.model_type == 'gffm':
             W = gamma_exp2_sample(args.length_scale, args.gamma_order, args.gffm_map_size)
         elif args.kernel == 'rq':
             W = rq_sample(args.length_scale, args.rq_order, args.gffm_map_size)
+        elif args.kernel == 'poly':
+            W = poly_sample(args.poly_order, args.gffm_map_size)
         else:
             raise NotImplementedError
         b = np.random.uniform(0, np.pi * 2, args.gffm_map_size)
