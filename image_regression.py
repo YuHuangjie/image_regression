@@ -149,6 +149,7 @@ p.add_argument('--batch_size', type=int, default=50000)
 p.add_argument('--lr', type=float, default=1e-4, help='learning rate. default=1e-4')
 p.add_argument('--num_epochs', type=int, default=20, help='Number of epochs to train for.')
 p.add_argument('--kernel', type=str, default="exp", help='choose from [exp], [exp2], [matern], [gamma_exp], [rq], [poly]')
+p.add_argument('--siren', action='store_true', help='substitute relu activation function with sin')
 
 p.add_argument('--epochs_til_ckpt', type=int, default=50,
                help='Epoch interval until checkpoint is saved.')
@@ -177,7 +178,8 @@ train_dataset = ImageDataset(image, randomize=True, batch_size=args.batch_size)
 val_dataset = ImageDataset(image, randomize=False)
 train_dataloader = DataLoader(train_dataset, pin_memory=True, batch_size=1, shuffle=True)
 
-logdir = os.path.join(args.logdir, f'{args.model_type}-{args.kernel}')
+logdir = os.path.join(args.logdir, f'{args.model_type}')
+logdir += f'-{args.kernel}' if args.model_type=='gffm' else ''
 if args.restart:
     shutil.rmtree(logdir, ignore_errors=True)
 
@@ -199,13 +201,13 @@ if os.path.exists(os.path.join(logdir, 'checkpoints')):
 network_size = (4,256)
 
 if args.model_type == 'relu':
-    model = make_relu_network(*network_size)
+    model = make_relu_network(*network_size, use_siren=args.siren)
 elif args.model_type == 'ffm':
     if model_params is None:
         B = torch.normal(0., args.ffm_map_scale, size=(args.ffm_map_size, 2))
     else:
         B = model_params
-    model = make_ffm_network(*network_size, B)
+    model = make_ffm_network(*network_size, B, use_siren=args.siren)
     model_params = (B)
 elif args.model_type == 'gffm':
     if model_params is None:
@@ -226,7 +228,7 @@ elif args.model_type == 'gffm':
         b = np.random.uniform(0, np.pi * 2, args.gffm_map_size)
     else:
         W, b = model_params
-    model = make_rff_network(*network_size, W, b)
+    model = make_rff_network(*network_size, W, b, use_siren=args.siren)
     model_params = (W, b)
 else:
     raise NotImplementedError

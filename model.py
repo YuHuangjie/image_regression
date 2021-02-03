@@ -70,18 +70,73 @@ class MLP(nn.Module):
             h = F.relu(h)
         outputs = torch.sigmoid(self.output_linear(h))
         return outputs
+
+class SIREN(MLP):
+    ### Taken from official SIREN repo
+    class Sine(nn.Module):
+        def __init(self):
+            super().__init__()
+
+        def forward(self, input):
+            # See paper sec. 3.2, final paragraph, and supplement Sec. 1.5 for discussion of factor 30
+            return torch.sin(30 * input)
+
+    def __init__(self, D, W, map):
+        super().__init__(D, W, map)
+        self.nl = SIREN.Sine()
+
+        # SIREN initialization
+        for linear in self.linears:
+            linear.apply(self.sine_init)
+        self.output_linear.apply(SIREN.sine_init)
+
+        # Apply special initialization to first layer
+        self.linears[0].apply(SIREN.first_layer_sine_init)
+
+    def forward(self, x):
+        h = self.map.map(x)
+        for i, l in enumerate(self.linears):
+            h = self.linears[i](h)
+            h = self.nl(h)
+        outputs = torch.sigmoid(self.output_linear(h))
+        return outputs
+
+    @staticmethod
+    def sine_init(m):
+        with torch.no_grad():
+            if hasattr(m, 'weight'):
+                num_input = m.weight.size(-1)
+                # See supplement Sec. 1.5 for discussion of factor 30
+                m.weight.uniform_(-np.sqrt(6 / num_input) / 30, np.sqrt(6 / num_input) / 30)
+
+    @staticmethod
+    def first_layer_sine_init(m):
+        with torch.no_grad():
+            if hasattr(m, 'weight'):
+                num_input = m.weight.size(-1)
+                # See paper sec. 3.2, final paragraph, and supplement Sec. 1.5 for discussion of factor 30
+                m.weight.uniform_(-1 / num_input, 1 / num_input)
     
-def make_ffm_network(D, W, B=None):
+def make_ffm_network(D, W, B=None, use_siren=False):
     map = FFM(B)
-    return MLP(D, W, map).float()
+    if not use_siren:
+        return MLP(D, W, map).float()
+    else:
+        return SIREN(D, W, map).float()
 
-def make_rff_network(D, W, We, b):
+def make_rff_network(D, W, We, b, use_siren=False):
     map = RFF(We, b)
-    return MLP(D, W, map).float()
+    if not use_siren:
+        return MLP(D, W, map).float()
+    else:
+        return SIREN(D, W, map).float()
 
-def make_relu_network(D, W):
+def make_relu_network(D, W, use_siren=False):
     map = NoMap()
-    return MLP(D, W, map).float()
+    if not use_siren:
+        return MLP(D, W, map).float()
+    else:
+        return SIREN(D, W, map).float()
 
 model_pred = lambda model, x: model(x)
 model_loss = lambda pred, y: torch.mean((pred - y) ** 2)
