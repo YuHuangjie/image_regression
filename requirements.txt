@@ -4,3 +4,4 @@ torch
 imageio
 numpy
 scipy
+sampyl-mcmc

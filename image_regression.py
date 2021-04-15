@@ -11,6 +11,7 @@ import imageio
 
 from model import *
 from sample import *
+import numpy as np
 
 def get_2d_mgrid(shape):
     pixel_coords = np.stack(np.mgrid[:shape[0], :shape[1]], axis=-1).astype(np.float32)
