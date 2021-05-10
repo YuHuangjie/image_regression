@@ -159,7 +159,7 @@ p.add_argument('--steps_til_summary', type=int, default=100,
 p.add_argument('--model_type', type=str, default='gffm',
                help='Options currently are "relu" (all relu activations), "ffm" (fourier feature mapping),'
                     '"gffm" (generalized ffm)')
-p.add_argument('--ffm_map_size', type=int, default=2048,
+p.add_argument('--ffm_map_size', type=int, default=4096,
                help='mapping dimension of ffm')
 p.add_argument('--ffm_map_scale', type=float, default=16,
                help='Gaussian mapping scale of positional input')
@@ -205,7 +205,7 @@ if args.model_type == 'relu':
     model = make_relu_network(*network_size, use_siren=args.siren)
 elif args.model_type == 'ffm':
     if model_params is None:
-        B = torch.normal(0., args.ffm_map_scale, size=(args.ffm_map_size, 2))
+        B = torch.normal(0., args.ffm_map_scale, size=(args.ffm_map_size//2, 2))
     else:
         B = model_params
     model = make_ffm_network(*network_size, B, use_siren=args.siren)
